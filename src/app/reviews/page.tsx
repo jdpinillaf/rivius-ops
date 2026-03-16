@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import type { ReviewStatus } from "@prisma/client";
 import { PageHeader } from "@/components/layout/page-header";
 import { MerchantFilter } from "@/components/merchant-filter";

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import type { ErrorGroupStatus } from "@prisma/client";
 import { PageHeader } from "@/components/layout/page-header";

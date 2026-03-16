@@ -1,13 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { PLAN_PRICES } from "@/lib/constants";
 import { startOfMonth } from "date-fns";
-import type { SubscriptionTier } from "@prisma/client";
+import type { Prisma, SubscriptionTier } from "@prisma/client";
+
+type CommissionWithReferral = Prisma.ReferralCommissionGetPayload<{
+  include: {
+    referral: { include: { referrerMerchant: { select: { shopDomain: true } } } };
+  };
+}>;
 
 export async function getPaymentsKpis() {
   const monthStart = startOfMonth(new Date());
 
-  const [activeSubs, whatsappRevenue, pendingBilling, commissions] =
-    await Promise.all([
+  const [activeSubs, whatsappRevenue, pendingBilling] = await Promise.all([
       prisma.merchantSubscription.findMany({
         where: { active: true },
         include: { merchant: { select: { shopDomain: true } } },
@@ -17,17 +22,24 @@ export async function getPaymentsKpis() {
         _sum: { costPerMessage: true },
       }),
       prisma.whatsAppUsageRecord.count({ where: { billed: false } }),
-      prisma.referralCommission.findMany({
-        include: {
-          referral: {
-            include: {
-              referrerMerchant: { select: { shopDomain: true } },
-            },
+    ]);
+
+  // ReferralCommission table may not exist yet — gracefully degrade
+  let commissions: CommissionWithReferral[] = [];
+  try {
+    commissions = await prisma.referralCommission.findMany({
+      include: {
+        referral: {
+          include: {
+            referrerMerchant: { select: { shopDomain: true } },
           },
         },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch {
+    // table doesn't exist yet — return empty
+  }
 
   const mrr = activeSubs.reduce(
     (sum, s) => sum + (PLAN_PRICES[s.tier as SubscriptionTier] ?? 0),

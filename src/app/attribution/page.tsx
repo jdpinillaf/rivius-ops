@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/kpi-card";
