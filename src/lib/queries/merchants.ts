@@ -14,7 +14,12 @@ export async function getMerchantsList(filters?: {
 
   return prisma.merchant.findMany({
     where,
-    include: {
+    select: {
+      id: true,
+      shopDomain: true,
+      plan: true,
+      contactEmail: true,
+      createdAt: true,
       _count: { select: { reviews: true, reviewRequests: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -29,9 +34,15 @@ export async function getAllMerchantsDomains() {
 }
 
 export async function getMerchantDetail(id: string) {
-  return prisma.merchant.findUnique({
+  const merchant = await prisma.merchant.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      shopDomain: true,
+      plan: true,
+      contactEmail: true,
+      createdAt: true,
+      updatedAt: true,
       settings: true,
       onboarding: true,
       subscriptions: { orderBy: { createdAt: "desc" } },
@@ -46,6 +57,22 @@ export async function getMerchantDetail(id: string) {
       },
     },
   });
+
+  if (!merchant) return null;
+
+  // trialEndsAt may not exist in DB yet
+  let trialEndsAt: Date | null = null;
+  try {
+    const trial = await prisma.merchant.findUnique({
+      where: { id },
+      select: { trialEndsAt: true },
+    });
+    trialEndsAt = trial?.trialEndsAt ?? null;
+  } catch {
+    // column doesn't exist yet
+  }
+
+  return { ...merchant, trialEndsAt };
 }
 
 export async function getMerchantReviewStats(merchantId: string) {
@@ -153,15 +180,20 @@ export async function getMerchantAttribution(merchantId: string) {
 }
 
 export async function getMerchantAffiliate(merchantId: string) {
-  const merchant = await prisma.merchant.findUnique({
-    where: { id: merchantId },
-    select: {
-      referralCode: true,
-      referralsMade: {
-        include: { commission: true },
-        orderBy: { createdAt: "desc" },
+  try {
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: {
+        referralCode: true,
+        referralsMade: {
+          include: { commission: true },
+          orderBy: { createdAt: "desc" },
+        },
       },
-    },
-  });
-  return merchant;
+    });
+    return merchant;
+  } catch {
+    // referralCode column or Referral table may not exist yet
+    return null;
+  }
 }

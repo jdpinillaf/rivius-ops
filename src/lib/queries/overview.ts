@@ -30,7 +30,7 @@ export async function getOverviewKpis() {
       _sum: { costPerMessage: true },
       _count: true,
     }),
-    prisma.merchant.count({ where: { trialEndsAt: { gt: now } } }),
+    prisma.merchant.count({ where: { trialEndsAt: { gt: now } } }).catch(() => 0),
     prisma.reviewRequest.count({
       where: { status: "FAILED", sentAt: { gte: dayStart } },
     }),
