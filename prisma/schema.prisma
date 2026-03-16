@@ -34,13 +34,6 @@ enum MediaType {
   AUDIO
 }
 
-enum CommissionStatus {
-  PENDING
-  EARNED
-  PAID
-  CANCELLED
-}
-
 enum MessageChannel {
   EMAIL
   WHATSAPP
@@ -52,6 +45,19 @@ enum BlastJobStatus {
   RUNNING
   DONE
   FAILED
+}
+
+enum CommissionStatus {
+  PENDING
+  EARNED
+  PAID
+  CANCELLED
+}
+
+enum ErrorGroupStatus {
+  OPEN
+  RESOLVED
+  IGNORED
 }
 
 model Merchant {
@@ -84,6 +90,7 @@ model Merchant {
   milestones               MerchantMilestone[]
   trialEndsAt              DateTime?
   blastJobs                BlastJob[]
+  errorOccurrences         ErrorOccurrence[]
 }
 
 model Review {
@@ -518,4 +525,39 @@ model WebhookEvent {
   processedAt DateTime @default(now())
 
   @@index([processedAt])
+}
+
+// ============================================================================
+// ERROR TRACKING
+// ============================================================================
+
+model ErrorGroup {
+  id          String           @id @default(cuid())
+  fingerprint String           @unique
+  message     String
+  source      String
+  status      ErrorGroupStatus @default(OPEN)
+  count       Int              @default(1)
+  firstSeenAt DateTime         @default(now())
+  lastSeenAt  DateTime         @default(now())
+  resolvedAt  DateTime?
+  note        String?
+  occurrences ErrorOccurrence[]
+
+  @@index([status, lastSeenAt])
+  @@index([source])
+}
+
+model ErrorOccurrence {
+  id           String     @id @default(cuid())
+  errorGroupId String
+  errorGroup   ErrorGroup @relation(fields: [errorGroupId], references: [id], onDelete: Cascade)
+  merchantId   String?
+  merchant     Merchant?  @relation(fields: [merchantId], references: [id], onDelete: SetNull)
+  stackTrace   String?
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+
+  @@index([errorGroupId, createdAt])
+  @@index([merchantId])
 }
