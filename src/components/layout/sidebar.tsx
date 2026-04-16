@@ -8,6 +8,7 @@ import {
   CreditCard,
   MessageCircle,
   MessagesSquare,
+  MessageSquare,
   Send,
   Star,
   Target,
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/reviews", label: "Reviews", icon: Star },
   { href: "/attribution", label: "Attribution", icon: Target },
   { href: "/support", label: "Support", icon: LifeBuoy },
+  { href: "/messages", label: "Mensajes", icon: MessageSquare },
 ];
 
 function NavLinks() {
