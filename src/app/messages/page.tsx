@@ -92,7 +92,7 @@ const ALL_KEYS = Object.keys(MESSAGE_META);
 
 export default async function MessagesPage() {
   const savedMessages = await getAllWhatsAppMessages();
-  const savedMap = new Map(savedMessages.map((m) => [m.key, m.body]));
+  const savedMap = new Map(savedMessages.map((m: { key: string; body: string }) => [m.key, m.body]));
 
   return (
     <div className="space-y-6">
