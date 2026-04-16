@@ -17,6 +17,11 @@ export function MerchantFilter({ merchants }: { merchants: Merchant[] }) {
   const searchParams = useSearchParams();
   const current = searchParams.get("merchantId") ?? "all";
 
+  const label =
+    current === "all"
+      ? "All merchants"
+      : merchants.find((m) => m.id === current)?.shopDomain ?? "All merchants";
+
   function onChange(value: string | null) {
     const params = new URLSearchParams(searchParams.toString());
     if (!value || value === "all") {
@@ -31,7 +36,7 @@ export function MerchantFilter({ merchants }: { merchants: Merchant[] }) {
   return (
     <Select value={current} onValueChange={onChange}>
       <SelectTrigger className="w-[220px]">
-        <SelectValue placeholder="All merchants" />
+        <SelectValue placeholder={label}>{label}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">All merchants</SelectItem>

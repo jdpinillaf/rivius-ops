@@ -32,7 +32,9 @@ import {
   getMerchantWhatsApp,
   getMerchantAttribution,
   getMerchantAffiliate,
+  getMerchantConversations,
 } from "@/lib/queries/merchants";
+import { ConversationThread } from "@/components/conversation-thread";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -41,16 +43,25 @@ export default async function MerchantDetailPage({ params }: Props) {
   const merchant = await getMerchantDetail(id);
   if (!merchant) notFound();
 
-  const [reviewStats, reviews, requestStats, requests, whatsapp, attribution, affiliate] =
-    await Promise.all([
-      getMerchantReviewStats(id),
-      getMerchantReviews(id),
-      getMerchantRequestStats(id),
-      getMerchantRequests(id),
-      getMerchantWhatsApp(id),
-      getMerchantAttribution(id),
-      getMerchantAffiliate(id),
-    ]);
+  const [
+    reviewStats,
+    reviews,
+    requestStats,
+    requests,
+    whatsapp,
+    attribution,
+    affiliate,
+    conversations,
+  ] = await Promise.all([
+    getMerchantReviewStats(id),
+    getMerchantReviews(id),
+    getMerchantRequestStats(id),
+    getMerchantRequests(id),
+    getMerchantWhatsApp(id),
+    getMerchantAttribution(id),
+    getMerchantAffiliate(id),
+    getMerchantConversations(id),
+  ]);
 
   const trialActive = merchant.trialEndsAt && merchant.trialEndsAt > new Date();
 
@@ -91,6 +102,7 @@ export default async function MerchantDetailPage({ params }: Props) {
           <TabsTrigger value="reviews">Reviews</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
           <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+          <TabsTrigger value="conversations">Conversations</TabsTrigger>
           <TabsTrigger value="attribution">Attribution</TabsTrigger>
           <TabsTrigger value="affiliate">Affiliate</TabsTrigger>
         </TabsList>
@@ -251,6 +263,89 @@ export default async function MerchantDetailPage({ params }: Props) {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        {/* Conversations Tab */}
+        <TabsContent value="conversations" className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <KpiCard
+              label="Threads with messages"
+              value={formatNumber(conversations.length)}
+            />
+            <KpiCard
+              label="With inbound"
+              value={formatNumber(
+                conversations.filter((c) => c.lastInboundAt !== null).length,
+              )}
+            />
+            <KpiCard
+              label="Resulted in review"
+              value={formatNumber(
+                conversations.filter((c) => c.review !== null).length,
+              )}
+            />
+          </div>
+
+          {conversations.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                No conversations with stored message bodies.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {conversations.map((c) => {
+                const contact = c.customerPhone ?? c.customerEmail;
+                const name = c.customerName ?? contact;
+                return (
+                  <Card key={c.id}>
+                    <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-2">
+                      <div className="min-w-0">
+                        <CardTitle className="truncate text-base">
+                          {name}
+                        </CardTitle>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {contact} · {c.productName ?? "—"}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <StatusBadge status={c.channel} />
+                        <StatusBadge status={c.status} />
+                        {c.messageStatus && (
+                          <StatusBadge status={c.messageStatus} />
+                        )}
+                        {c.review && (
+                          <StatusBadge
+                            status={`${c.review.rating}★ ${c.review.status}`}
+                          />
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex flex-wrap gap-4 text-[11px] text-muted-foreground">
+                        <span>
+                          Sent: {c.sentAt ? formatDateTime(c.sentAt) : "—"}
+                        </span>
+                        <span>
+                          Last inbound:{" "}
+                          {c.lastInboundAt
+                            ? formatDateTime(c.lastInboundAt)
+                            : "—"}
+                        </span>
+                      </div>
+                      <ConversationThread conversation={c.conversation} />
+                      {c.review?.comment && (
+                        <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs">
+                          <span className="font-semibold">Final review: </span>
+                          {c.review.comment}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         {/* Attribution Tab */}

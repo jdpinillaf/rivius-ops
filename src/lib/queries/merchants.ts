@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma, SubscriptionTier } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { SubscriptionTier } from "@prisma/client";
 
 export async function getMerchantsList(filters?: {
   plan?: SubscriptionTier;
@@ -177,6 +178,29 @@ export async function getMerchantAttribution(merchantId: string) {
       totalAmount: s.totalAmount ? Number(s.totalAmount) : null,
     })),
   };
+}
+
+export async function getMerchantConversations(merchantId: string) {
+  const rows = await prisma.reviewRequest.findMany({
+    where: { merchantId, conversation: { not: Prisma.DbNull } },
+    orderBy: [{ lastInboundAt: "desc" }, { sentAt: "desc" }],
+    take: 30,
+    select: {
+      id: true,
+      customerName: true,
+      customerEmail: true,
+      customerPhone: true,
+      channel: true,
+      status: true,
+      productName: true,
+      sentAt: true,
+      lastInboundAt: true,
+      messageStatus: true,
+      conversation: true,
+      review: { select: { rating: true, comment: true, status: true } },
+    },
+  });
+  return rows;
 }
 
 export async function getMerchantAffiliate(merchantId: string) {
