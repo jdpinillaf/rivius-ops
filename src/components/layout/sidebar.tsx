@@ -12,6 +12,7 @@ import {
   Star,
   Target,
   LifeBuoy,
+  LogOut,
   Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,23 @@ function NavLinks() {
   );
 }
 
+function LogoutButton() {
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  }
+
+  return (
+    <button
+      onClick={handleLogout}
+      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+    >
+      <LogOut className="h-4 w-4" />
+      Logout
+    </button>
+  );
+}
+
 export function Sidebar() {
   return (
     <>
@@ -74,8 +92,9 @@ export function Sidebar() {
         <div className="mt-4 flex-1">
           <NavLinks />
         </div>
-        <div className="border-t border-white/10 px-4 py-3">
-          <p className="text-xs text-slate-500">Internal Dashboard</p>
+        <div className="space-y-2 border-t border-white/10 px-3 py-3">
+          <LogoutButton />
+          <p className="px-3 text-xs text-slate-500">Internal Dashboard</p>
         </div>
       </aside>
 
