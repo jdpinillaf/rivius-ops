@@ -13,6 +13,8 @@ type MerchantRow = {
   plan: SubscriptionTier;
   contactEmail: string | null;
   createdAt: Date;
+  betaDiscountPercent: number | null;
+  betaDiscountMonths: number | null;
   _count: { reviews: number; reviewRequests: number };
 };
 
@@ -33,6 +35,22 @@ const columns: ColumnDef<MerchantRow>[] = [
     accessorKey: "plan",
     header: "Plan",
     cell: ({ row }) => <PlanBadge tier={row.original.plan} />,
+  },
+  {
+    id: "discount",
+    header: "Discount",
+    cell: ({ row }) => {
+      const p = row.original.betaDiscountPercent;
+      if (p == null) return <span className="text-muted-foreground">—</span>;
+      const dur = row.original.betaDiscountMonths
+        ? `${row.original.betaDiscountMonths}mo`
+        : "forever";
+      return (
+        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+          {p}% · {dur}
+        </span>
+      );
+    },
   },
   {
     accessorKey: "contactEmail",

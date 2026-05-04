@@ -47,13 +47,6 @@ enum BlastJobStatus {
   FAILED
 }
 
-enum CommissionStatus {
-  PENDING
-  EARNED
-  PAID
-  CANCELLED
-}
-
 enum ErrorGroupStatus {
   OPEN
   RESOLVED
@@ -81,16 +74,37 @@ model Merchant {
   insightStats       MerchantInsightStats?
   widgetClicks       ReviewWidgetClick[]
   saleAttributions   SaleAttribution[]
-  referralCode             String?               @unique
-  referralsMade            Referral[]            @relation("ReferralsMade")
-  referredBy               Referral?             @relation("ReferredBy")
-  stripeConnectAccountId   String?
-  stripeConnectOnboarded   Boolean               @default(false)
   whatsAppUsage            WhatsAppUsageRecord[]
   milestones               MerchantMilestone[]
   trialEndsAt              DateTime?
   blastJobs                BlastJob[]
   errorOccurrences         ErrorOccurrence[]
+  onboardingEvents         OnboardingEvent[]
+  betaDiscountPercent      Int?
+  betaDiscountMonths       Int?
+  betaDiscountReason       String?
+  betaDiscountAt           DateTime?
+  betaDiscountBy           String?
+
+  @@index([betaDiscountPercent])
+}
+
+model OnboardingEvent {
+  id          String   @id @default(cuid())
+  merchantId  String
+  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  shopDomain  String
+  sessionId   String?
+  eventName   String
+  stepIndex   Int?
+  stepName    String?
+  reason      String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([eventName, createdAt])
+  @@index([shopDomain, sessionId])
 }
 
 model Review {
@@ -401,47 +415,6 @@ model SaleAttribution {
   @@index([merchantId, productId])
   @@index([attributedAt])
   @@index([orderId])
-}
-
-// ============================================================================
-// SISTEMA DE AFILIADOS
-// ============================================================================
-
-model Referral {
-  id                 String              @id @default(cuid())
-  referrerMerchantId String
-  referrerMerchant   Merchant            @relation("ReferralsMade", fields: [referrerMerchantId], references: [id], onDelete: Cascade)
-  refereeMerchantId  String?             @unique
-  refereeMerchant    Merchant?           @relation("ReferredBy", fields: [refereeMerchantId], references: [id], onDelete: SetNull)
-  referralCode       String              @unique
-  refereeShopDomain  String?
-  clickCount         Int                 @default(0)
-  convertedAt        DateTime?
-  createdAt          DateTime            @default(now())
-  commission         ReferralCommission?
-
-  @@index([referrerMerchantId])
-}
-
-model ReferralCommission {
-  id                 String           @id @default(cuid())
-  referralId         String           @unique
-  referral           Referral         @relation(fields: [referralId], references: [id], onDelete: Cascade)
-  referrerMerchantId String
-  tier               SubscriptionTier
-  amountCents        Int
-  currency           String           @default("usd")
-  status             CommissionStatus @default(PENDING)
-  earnedAt           DateTime?
-  paidAt             DateTime?
-  payoutNote         String?
-  stripeTransferId   String?
-  stripeError        String?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-
-  @@index([referrerMerchantId])
-  @@index([status])
 }
 
 // ============================================================================

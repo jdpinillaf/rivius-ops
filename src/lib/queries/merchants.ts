@@ -5,12 +5,14 @@ import type { SubscriptionTier } from "@prisma/client";
 export async function getMerchantsList(filters?: {
   plan?: SubscriptionTier;
   search?: string;
+  betaOnly?: boolean;
 }) {
   const where: Prisma.MerchantWhereInput = {
     ...(filters?.plan && { plan: filters.plan }),
     ...(filters?.search && {
       shopDomain: { contains: filters.search, mode: "insensitive" as const },
     }),
+    ...(filters?.betaOnly && { betaDiscountPercent: { not: null } }),
   };
 
   return prisma.merchant.findMany({
@@ -21,6 +23,8 @@ export async function getMerchantsList(filters?: {
       plan: true,
       contactEmail: true,
       createdAt: true,
+      betaDiscountPercent: true,
+      betaDiscountMonths: true,
       _count: { select: { reviews: true, reviewRequests: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -47,6 +51,11 @@ export async function getMerchantDetail(id: string) {
       settings: true,
       onboarding: true,
       subscriptions: { orderBy: { createdAt: "desc" } },
+      betaDiscountPercent: true,
+      betaDiscountMonths: true,
+      betaDiscountReason: true,
+      betaDiscountAt: true,
+      betaDiscountBy: true,
       _count: {
         select: {
           reviews: true,
@@ -203,21 +212,3 @@ export async function getMerchantConversations(merchantId: string) {
   return rows;
 }
 
-export async function getMerchantAffiliate(merchantId: string) {
-  try {
-    const merchant = await prisma.merchant.findUnique({
-      where: { id: merchantId },
-      select: {
-        referralCode: true,
-        referralsMade: {
-          include: { commission: true },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
-    return merchant;
-  } catch {
-    // referralCode column or Referral table may not exist yet
-    return null;
-  }
-}

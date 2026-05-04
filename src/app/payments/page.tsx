@@ -33,7 +33,7 @@ export default async function PaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Payments" description="Subscriptions, billing, and commissions" />
+      <PageHeader title="Payments" description="Subscriptions and billing" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
@@ -63,7 +63,6 @@ export default async function PaymentsPage() {
           <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
           <TabsTrigger value="billing-runs">Billing Runs</TabsTrigger>
           <TabsTrigger value="pending">Pending / Failed</TabsTrigger>
-          <TabsTrigger value="commissions">Commissions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="subscriptions">
@@ -155,41 +154,6 @@ export default async function PaymentsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="commissions">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Referrer</TableHead>
-                  <TableHead>Tier</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {kpis.commissions.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">
-                      {c.referral.referrerMerchant.shopDomain}
-                    </TableCell>
-                    <TableCell><PlanBadge tier={c.tier} /></TableCell>
-                    <TableCell>{formatCurrency(c.amountCents / 100)}</TableCell>
-                    <TableCell><StatusBadge status={c.status} /></TableCell>
-                    <TableCell>{formatDate(c.createdAt)}</TableCell>
-                  </TableRow>
-                ))}
-                {kpis.commissions.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      No commissions
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
       </Tabs>
     </div>
   );

@@ -1,4 +1,4 @@
-import type { SubscriptionTier, ReviewRequestStatus, ReviewStatus, MessageChannel, CommissionStatus } from "@prisma/client";
+import type { SubscriptionTier, ReviewRequestStatus, ReviewStatus, MessageChannel } from "@prisma/client";
 
 export type KpiData = {
   label: string;
@@ -52,4 +52,4 @@ export type PaginationParams = {
   pageSize: number;
 };
 
-export { SubscriptionTier, ReviewRequestStatus, ReviewStatus, MessageChannel, CommissionStatus };
+export { SubscriptionTier, ReviewRequestStatus, ReviewStatus, MessageChannel };

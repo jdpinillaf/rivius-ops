@@ -31,10 +31,10 @@ import {
   getMerchantRequests,
   getMerchantWhatsApp,
   getMerchantAttribution,
-  getMerchantAffiliate,
   getMerchantConversations,
 } from "@/lib/queries/merchants";
 import { ConversationThread } from "@/components/conversation-thread";
+import { BetaDiscountCard } from "@/components/beta-discount-card";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -50,7 +50,6 @@ export default async function MerchantDetailPage({ params }: Props) {
     requests,
     whatsapp,
     attribution,
-    affiliate,
     conversations,
   ] = await Promise.all([
     getMerchantReviewStats(id),
@@ -59,7 +58,6 @@ export default async function MerchantDetailPage({ params }: Props) {
     getMerchantRequests(id),
     getMerchantWhatsApp(id),
     getMerchantAttribution(id),
-    getMerchantAffiliate(id),
     getMerchantConversations(id),
   ]);
 
@@ -95,6 +93,18 @@ export default async function MerchantDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
+      {/* Beta Discount */}
+      <BetaDiscountCard
+        merchantId={merchant.id}
+        current={{
+          betaDiscountPercent: merchant.betaDiscountPercent ?? null,
+          betaDiscountMonths: merchant.betaDiscountMonths ?? null,
+          betaDiscountReason: merchant.betaDiscountReason ?? null,
+          betaDiscountAt: merchant.betaDiscountAt ?? null,
+          betaDiscountBy: merchant.betaDiscountBy ?? null,
+        }}
+      />
+
       {/* Tabs */}
       <Tabs defaultValue="subscriptions">
         <TabsList>
@@ -104,7 +114,6 @@ export default async function MerchantDetailPage({ params }: Props) {
           <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           <TabsTrigger value="conversations">Conversations</TabsTrigger>
           <TabsTrigger value="attribution">Attribution</TabsTrigger>
-          <TabsTrigger value="affiliate">Affiliate</TabsTrigger>
         </TabsList>
 
         {/* Subscriptions Tab */}
@@ -390,53 +399,6 @@ export default async function MerchantDetailPage({ params }: Props) {
           </div>
         </TabsContent>
 
-        {/* Affiliate Tab */}
-        <TabsContent value="affiliate" className="space-y-4">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground">Referral Code</p>
-              <p className="font-mono text-lg font-medium">
-                {affiliate?.referralCode ?? "No referral code"}
-              </p>
-            </CardContent>
-          </Card>
-          {affiliate?.referralsMade && affiliate.referralsMade.length > 0 && (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Referee</TableHead>
-                    <TableHead>Converted</TableHead>
-                    <TableHead>Commission</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {affiliate.referralsMade.map((ref) => (
-                    <TableRow key={ref.id}>
-                      <TableCell>{ref.refereeShopDomain ?? "—"}</TableCell>
-                      <TableCell>
-                        {ref.convertedAt ? formatDate(ref.convertedAt) : "Pending"}
-                      </TableCell>
-                      <TableCell>
-                        {ref.commission
-                          ? formatCurrency(ref.commission.amountCents / 100)
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {ref.commission ? (
-                          <StatusBadge status={ref.commission.status} />
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </TabsContent>
       </Tabs>
     </div>
   );

@@ -14,10 +14,6 @@ const statusColors: Record<string, string> = {
   OPEN: "bg-red-100 text-red-700",
   RESOLVED: "bg-green-100 text-green-700",
   IGNORED: "bg-gray-100 text-gray-700",
-  // CommissionStatus
-  EARNED: "bg-green-100 text-green-700",
-  PAID: "bg-emerald-100 text-emerald-700",
-  CANCELLED: "bg-red-100 text-red-700",
   // MessageChannel
   EMAIL: "bg-indigo-100 text-indigo-700",
   WHATSAPP: "bg-green-100 text-green-700",
