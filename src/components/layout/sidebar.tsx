@@ -15,6 +15,7 @@ import {
   LifeBuoy,
   LogOut,
   Menu,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/onboarding-funnel", label: "Onboarding", icon: Activity },
   { href: "/merchants", label: "Merchants", icon: Store },
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
