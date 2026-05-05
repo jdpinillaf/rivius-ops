@@ -14,6 +14,9 @@ const statusColors: Record<string, string> = {
   OPEN: "bg-red-100 text-red-700",
   RESOLVED: "bg-green-100 text-green-700",
   IGNORED: "bg-gray-100 text-gray-700",
+  // BlastJobStatus
+  RUNNING: "bg-blue-100 text-blue-700",
+  DONE: "bg-green-100 text-green-700",
   // MessageChannel
   EMAIL: "bg-indigo-100 text-indigo-700",
   WHATSAPP: "bg-green-100 text-green-700",
