@@ -8,7 +8,7 @@ import type { ReviewRequestStatus, MessageChannel } from "@prisma/client";
 
 type RequestRow = {
   id: string;
-  customerEmail: string;
+  customerEmail: string | null;
   customerPhone: string | null;
   productName: string | null;
   channel: MessageChannel;
@@ -32,7 +32,7 @@ const columns: ColumnDef<RequestRow>[] = [
     accessorKey: "customerEmail",
     header: "Customer",
     cell: ({ row }) => (
-      <span className="text-sm">{row.original.customerEmail}</span>
+      <span className="text-sm">{row.original.customerEmail ?? "—"}</span>
     ),
   },
   {

@@ -10,7 +10,7 @@ import type { ReviewStatus, MediaType } from "@prisma/client";
 type ReviewRow = {
   id: string;
   customerName: string | null;
-  customerEmail: string;
+  customerEmail: string | null;
   productName: string;
   rating: number;
   status: ReviewStatus;

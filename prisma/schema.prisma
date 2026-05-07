@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -54,15 +54,16 @@ enum ErrorGroupStatus {
 }
 
 model Merchant {
-  id                 String                @id @default(cuid())
-  shopDomain         String                @unique
+  id                 String                 @id @default(cuid())
+  shopDomain         String                 @unique
+  shopName           String?
   shopifyAccessToken String?
   contactEmail       String?
   contactName        String?
-  emailAlias         String?               @unique
-  plan               SubscriptionTier      @default(FREE)
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
+  emailAlias         String?                @unique
+  plan               SubscriptionTier       @default(FREE)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
   reviews            Review[]
   subscriptions      MerchantSubscription[]
   reviewRequests     ReviewRequest[]
@@ -74,19 +75,220 @@ model Merchant {
   insightStats       MerchantInsightStats?
   widgetClicks       ReviewWidgetClick[]
   saleAttributions   SaleAttribution[]
-  whatsAppUsage            WhatsAppUsageRecord[]
-  milestones               MerchantMilestone[]
-  trialEndsAt              DateTime?
-  blastJobs                BlastJob[]
-  errorOccurrences         ErrorOccurrence[]
-  onboardingEvents         OnboardingEvent[]
-  betaDiscountPercent      Int?
-  betaDiscountMonths       Int?
-  betaDiscountReason       String?
-  betaDiscountAt           DateTime?
-  betaDiscountBy           String?
+  mantleApiToken     String?
+  whatsAppUsage      WhatsAppUsageRecord[]
+  milestones         MerchantMilestone[]
+  trialEndsAt          DateTime?
+  lastReviewPromptAt   DateTime?
+  blastJobs            BlastJob[]
+  errorOccurrences     ErrorOccurrence[]
+  widgetImpressions    WidgetImpression[]
+  digests              MerchantDigest[]
+  onboardingEvents     OnboardingEvent[]
+  betaDiscountPercent  Int?
+  betaDiscountMonths   Int?
+  betaDiscountReason   String?
+  betaDiscountAt       DateTime?
+  betaDiscountBy       String?
 
   @@index([betaDiscountPercent])
+}
+
+model Review {
+  id                 String          @id @default(cuid())
+  merchantId         String
+  merchant           Merchant        @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  reviewRequestId    String?         @unique
+  reviewRequest      ReviewRequest?  @relation(fields: [reviewRequestId], references: [id], onDelete: Cascade)
+  orderId            String?
+  productId          String
+  productName        String
+  rating             Int
+  comment            String
+  customerEmail      String?
+  customerName       String?
+  customerAttributes Json?
+  status             ReviewStatus    @default(FLAGGED)
+  pinned             Boolean         @default(false)
+  merchantReply      String?
+  merchantReplyAt    DateTime?
+  discountCode            String?
+  discountNotifyAfter     DateTime?
+  discountNotified        Boolean         @default(false)
+  createdAt               DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  likes              ReviewLike[]
+  media              ReviewMedia[]
+  analysis           ReviewAnalysis?
+
+  @@index([merchantId, productId])
+  @@index([merchantId, status])
+  @@index([merchantId, createdAt])
+  @@index([merchantId, rating])
+  @@index([merchantId, customerEmail])
+  @@index([merchantId, pinned, createdAt])
+  @@index([orderId])
+  @@index([discountNotified, discountNotifyAfter])
+}
+
+model CustomerProfile {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  phone      String
+  email      String?
+  name       String?
+  attributes Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([merchantId, phone])
+  @@index([merchantId, email])
+}
+
+model ReviewRequest {
+  id                     String                 @id @default(cuid())
+  merchantId             String
+  merchant               Merchant               @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  orderId                String
+  orderName              String?
+  customerEmail          String?
+  customerPhone          String?
+  customerName           String?
+  productId              String                 @default("_unknown_")
+  productName            String?
+  channel                MessageChannel         @default(EMAIL)
+  status                 ReviewRequestStatus    @default(PENDING)
+  sendAfter              DateTime?
+  sentAt                 DateTime?
+  respondedAt            DateTime?
+  error                  String?
+  messageSid             String?
+  messageStatus          String?
+  messageStatusUpdatedAt DateTime?
+  conversation           Json?
+  lastInboundAt          DateTime?
+  importedFromRevie      Boolean                @default(false)
+  // Created by the onboarding initial blast. Excluded from monthly plan limit
+  // count so the historical bulk-send doesn't penalize the merchant's ongoing quota.
+  isOnboardingBlast      Boolean                @default(false)
+  review                 Review?
+  analysis               ReviewRequestAnalysis?
+  whatsAppUsage          WhatsAppUsageRecord?
+
+  @@unique([merchantId, orderId, productId])
+  @@index([merchantId, status])
+  @@index([merchantId, customerEmail])
+  @@index([customerPhone])
+  @@index([messageSid])
+  @@index([merchantId, sentAt])
+  @@index([status, sendAfter])
+  @@index([merchantId, status, sentAt])
+  @@index([merchantId, status, sendAfter])
+  @@index([merchantId, importedFromRevie, status])
+}
+
+model MerchantSubscription {
+  id                    String           @id @default(cuid())
+  merchantId            String
+  merchant              Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  tier                  SubscriptionTier
+  active                Boolean          @default(true)
+  renewsAt              DateTime?
+  shopifySubscriptionId String?          @unique
+  usageLineItemId       String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@unique([merchantId, tier])
+  @@index([merchantId, active])
+}
+
+model MerchantSettings {
+  id                     String         @id @default(cuid())
+  merchantId             String         @unique
+  merchant               Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  notificationEmail      String?
+  requestChannel         MessageChannel @default(ALL)
+  notificationChannel    MessageChannel @default(ALL)
+  messageChannel         MessageChannel @default(WHATSAPP)
+  whatsappTemplate       String         @default("first_review_template")
+  reviewOrder            String         @default("RECENT")
+  showStorefrontWidget   Boolean        @default(true)
+  starColor              String         @default("#fbbf24")
+  textColor              String         @default("#0f172a")
+  checkColor             String         @default("#14b8a6")
+  widgetThemeMigrated    Boolean        @default(false)
+  widgetBackground       String         @default("#ffffff")
+  widgetMaxReviews       Int            @default(5)
+  widgetGalleryStyle     String         @default("grid")
+  widgetImageRadius      Int            @default(12)
+  widgetImageFit         String         @default("cover")
+  widgetImagePadding     Int            @default(0)
+  widgetMetaSizeDesktop  Int            @default(13)
+  widgetMetaSizeMobile   Int            @default(15)
+  widgetShowWriteReview  Boolean        @default(true)
+  widgetWriteReviewLabel String         @default("Escribir reseña")
+  widgetEnableLikes      Boolean        @default(true)
+  widgetEnableDislikes   Boolean        @default(true)
+  widgetLikeLabel        String         @default("Útil")
+  widgetDislikeLabel     String         @default("No útil")
+  widgetBadgeText        String         @default("Producto destacado")
+  widgetSortFeatured     Boolean        @default(true)
+  widgetSortRecent       Boolean        @default(true)
+  widgetSortHighest      Boolean        @default(true)
+  widgetSortLowest       Boolean        @default(true)
+  widgetSortHelpful      Boolean        @default(true)
+  widgetFilterStars5     Boolean        @default(true)
+  widgetFilterStars4     Boolean        @default(true)
+  widgetFilterStars3     Boolean        @default(true)
+  widgetFilterPhoto      Boolean        @default(true)
+  widgetFilterVideo      Boolean        @default(true)
+  widgetFilterAudio      Boolean        @default(true)
+  detailPaddingTop       Int            @default(0)
+  detailPaddingBottom    Int            @default(0)
+  starSize               Int            @default(15)
+  starPosition           String         @default("center")
+  commentMaxWidth        Int            @default(1280)
+  blockSpacing           String         @default("1rem")
+  labelVerifiedBadge     String         @default("Comprador verificado")
+  labelCustomerOpinions  String         @default("Opiniones de nuestros clientes")
+  labelReviews           String         @default("OPINIONES")
+  showReviewsWithoutText Boolean        @default(false)
+  reviewFormat           String         @default("modern")
+  hideProductDescription Boolean        @default(false)
+  emptyStateText         String         @default("Mostrar reviews")
+  reviewAttributes       Json?
+  reviewAttributesWidget Json?
+  insightsWidget         Json?
+  weeklySchedule         Json?
+  timezone               String         @default("America/Mexico_City")
+  language               String         @default("es")
+  acceptVoiceReviews     Boolean        @default(true)
+  acceptPhotoReviews     Boolean        @default(true)
+  acceptVideoReviews     Boolean        @default(true)
+  requestDelayDays       Int            @default(7)
+  repeatRequestDays      Int            @default(30)
+  requestTrigger         String         @default("FULFILLED")
+  aiAutoApprove          Boolean        @default(false)
+  discountEnabled        Boolean        @default(false)
+  discountType           String         @default("percentage")
+  discountValue          Decimal        @default(10) @db.Decimal(10, 2)
+  discountValuePhoto     Decimal?
+  discountValueVideo     Decimal?
+  discountMinRating      Int            @default(1)
+  emailTemplateSubject   String?
+  emailTemplateBody      String?
+  emailTemplateLogo      String?
+  emailBrandColor        String         @default("#74DE8F")
+  sameProductReRequest   Boolean        @default(true)
+  autoApproveFiveStars   Boolean        @default(false)
+  frequencyLimitEnabled  Boolean        @default(false)
+  frequencyMaxRequests   Int            @default(1)
+  frequencyPeriodDays    Int            @default(30)
+  whatsappSpendingLimit  Decimal?       @db.Decimal(10, 2)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
 }
 
 model OnboardingEvent {
@@ -107,167 +309,13 @@ model OnboardingEvent {
   @@index([shopDomain, sessionId])
 }
 
-model Review {
-  id             String        @id @default(cuid())
-  merchantId     String
-  merchant       Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  reviewRequestId String? @unique
-  reviewRequest  ReviewRequest? @relation(fields: [reviewRequestId], references: [id])
-  orderId        String?
-  productId      String
-  productName    String
-  rating         Int
-  comment        String
-  customerEmail  String
-  customerName   String?
-  customerAttributes Json?
-  status         ReviewStatus  @default(FLAGGED)
-  pinned         Boolean       @default(false)
-  merchantReply  String?
-  merchantReplyAt DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  likes          ReviewLike[]
-  media          ReviewMedia[]
-  analysis       ReviewAnalysis?
-
-  @@index([merchantId, productId])
-  @@index([merchantId, status])
-  @@index([merchantId, createdAt])
-  @@index([merchantId, customerEmail])
-}
-
-model CustomerProfile {
-  id         String   @id @default(cuid())
-  merchantId String
-  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  phone      String
-  email      String?
-  name       String?
-  attributes Json?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([merchantId, phone])
-  @@index([merchantId, email])
-}
-
-model ReviewRequest {
-  id            String              @id @default(cuid())
-  merchantId    String
-  merchant      Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  orderId       String
-  orderName     String?
-  customerEmail String
-  customerPhone String?
-  customerName  String?
-  productId     String?
-  productName   String?
-  channel       MessageChannel     @default(EMAIL)
-  status        ReviewRequestStatus @default(PENDING)
-  sendAfter     DateTime?
-  sentAt        DateTime?
-  respondedAt   DateTime?
-  error         String?
-  messageSid    String?
-  messageStatus String?
-  messageStatusUpdatedAt DateTime?
-  conversation  Json?
-  lastInboundAt DateTime?
-  importedFromRevie Boolean @default(false)
-  isOnboardingBlast Boolean @default(false)
-  review        Review?
-  analysis      ReviewRequestAnalysis?
-  whatsAppUsage WhatsAppUsageRecord?
-
-  @@unique([merchantId, orderId])
-  @@index([merchantId, status])
-  @@index([merchantId, customerEmail])
-  @@index([customerPhone])
-  @@index([messageSid])
-  @@index([merchantId, sentAt])
-  @@index([status, sendAfter])
-}
-
-model MerchantSubscription {
-  id                   String            @id @default(cuid())
-  merchantId           String
-  merchant             Merchant          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  tier                 SubscriptionTier
-  active               Boolean           @default(true)
-  renewsAt             DateTime?
-  shopifySubscriptionId String? @unique
-  usageLineItemId      String?
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-
-  @@unique([merchantId, tier])
-  @@index([merchantId, active])
-}
-
-model MerchantSettings {
-  id                     String   @id @default(cuid())
-  merchantId             String   @unique
-  merchant               Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  notificationEmail      String?
-  requestChannel         MessageChannel @default(ALL)
-  notificationChannel    MessageChannel @default(ALL)
-  messageChannel         MessageChannel @default(WHATSAPP)
-  whatsappTemplate       String   @default("first_review_template")
-  reviewOrder            String   @default("RECENT")
-  showStorefrontWidget   Boolean  @default(true)
-  starColor              String   @default("#fbbf24")
-  textColor              String   @default("#0f172a")
-  checkColor             String   @default("#14b8a6")
-  detailPaddingTop       Int      @default(0)
-  detailPaddingBottom    Int      @default(0)
-  starSize               Int      @default(15)
-  starPosition           String   @default("center")
-  commentMaxWidth        Int      @default(1280)
-  blockSpacing           String   @default("1rem")
-  labelVerifiedBadge     String   @default("Comprador verificado")
-  labelCustomerOpinions  String   @default("Opiniones de nuestros clientes")
-  labelReviews           String   @default("OPINIONES")
-  showReviewsWithoutText Boolean  @default(false)
-  reviewFormat           String   @default("modern")
-  hideProductDescription Boolean  @default(false)
-  emptyStateText         String   @default("Mostrar reviews")
-  reviewAttributes       Json?
-  reviewAttributesWidget Json?
-  insightsWidget         Json?
-  weeklySchedule         Json?
-  timezone               String   @default("America/Mexico_City")
-  language               String   @default("es")
-  acceptVoiceReviews     Boolean  @default(true)
-  acceptPhotoReviews     Boolean  @default(true)
-  acceptVideoReviews     Boolean  @default(true)
-  requestDelayDays       Int      @default(7)
-  repeatRequestDays      Int      @default(30)
-  autoPublish            Boolean  @default(false)
-  discountEnabled        Boolean  @default(false)
-  discountType           String   @default("percentage")
-  discountValue          Decimal  @default(10) @db.Decimal(10, 2)
-  discountValuePhoto     Decimal?
-  discountValueVideo     Decimal?
-  discountMinRating      Int      @default(1)
-  emailTemplateSubject   String?
-  emailTemplateBody      String?
-  emailTemplateLogo      String?
-  emailBrandColor        String   @default("#74DE8F")
-  frequencyLimitEnabled  Boolean  @default(false)
-  frequencyMaxRequests   Int      @default(1)
-  frequencyPeriodDays    Int      @default(30)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-}
-
 model MerchantOnboarding {
-  id                     String   @id @default(cuid())
-  merchantId             String   @unique
-  merchant               Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  productWidgetInstalled Boolean  @default(false)
-  homeWidgetInstalled    Boolean  @default(false)
-  colorsApplied          Boolean  @default(false)
+  id                     String    @id @default(cuid())
+  merchantId             String    @unique
+  merchant               Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  productWidgetInstalled Boolean   @default(false)
+  homeWidgetInstalled    Boolean   @default(false)
+  colorsApplied          Boolean   @default(false)
   jobSelection           String?
   channelSelection       String?
   reviewsImported        Boolean   @default(false)
@@ -276,23 +324,25 @@ model MerchantOnboarding {
   blastSentAt            DateTime?
   blastCount             Int       @default(0)
   completedAt            DateTime?
+  // Auto-granted Pro trial on onboarding entry. Reverted by cron if onboarding
+  // not completed within 1h. Cap re-grants via trialAutoGrantCount to deter abuse.
   trialAutoGrantedAt     DateTime?
   trialAutoRevertedAt    DateTime?
   trialAutoGrantCount    Int       @default(0)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   @@index([trialAutoGrantedAt, trialAutoRevertedAt, completedAt])
 }
 
 model Insight {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  imageUrl    String?
-  requirements Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String            @id @default(cuid())
+  name             String
+  description      String
+  imageUrl         String?
+  requirements     Json
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   merchantInsights MerchantInsight[]
 }
 
@@ -310,14 +360,14 @@ model MerchantInsight {
 }
 
 model MerchantInsightStats {
-  id               String   @id @default(cuid())
-  merchantId       String   @unique
-  merchant         Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  totalReviews     Int      @default(0)
-  totalProductsSold Int     @default(0)
-  totalOrders      Int      @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                String   @id @default(cuid())
+  merchantId        String   @unique
+  merchant          Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  totalReviews      Int      @default(0)
+  totalProductsSold Int      @default(0)
+  totalOrders       Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model ReviewLike {
@@ -356,24 +406,25 @@ model ReviewAnalysis {
 }
 
 model ReviewRequestAnalysis {
-  id             String   @id @default(cuid())
-  reviewRequestId String  @unique
-  reviewRequest  ReviewRequest @relation(fields: [reviewRequestId], references: [id], onDelete: Cascade)
-  sentimentLabel String
-  sentimentScore Float
-  keywords       Json?
-  summary        String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String        @id @default(cuid())
+  reviewRequestId String        @unique
+  reviewRequest   ReviewRequest @relation(fields: [reviewRequestId], references: [id], onDelete: Cascade)
+  sentimentLabel  String
+  sentimentScore  Float
+  keywords        Json?
+  summary         String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model ReportSnapshot {
-  id         String   @id @default(cuid())
-  merchantId String   @unique
-  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  payload    Json
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String    @id @default(cuid())
+  merchantId   String    @unique
+  merchant     Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  payload      Json
+  refreshingAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 // ============================================================================
@@ -381,43 +432,45 @@ model ReportSnapshot {
 // ============================================================================
 
 model ReviewWidgetClick {
-  id           String   @id @default(cuid())
-  merchantId   String
-  merchant     Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  reviewId     String
-  productId    String
-  sessionId    String
-  customerId   String?
+  id            String           @id @default(cuid())
+  merchantId    String
+  merchant      Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  reviewId      String
+  productId     String
+  sessionId     String
+  customerId    String?
   customerEmail String?
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime @default(now())
-  attribution  SaleAttribution?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime         @default(now())
+  attribution   SaleAttribution?
 
   @@index([merchantId, productId])
   @@index([sessionId])
   @@index([createdAt])
   @@index([customerEmail])
   @@index([ipAddress])
+  @@index([reviewId])
 }
 
 model SaleAttribution {
-  id              String   @id @default(cuid())
-  merchantId      String
-  merchant        Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  clickId         String?  @unique
-  click           ReviewWidgetClick? @relation(fields: [clickId], references: [id], onDelete: SetNull)
-  orderId         String
-  orderName       String?
-  productId       String
-  productName     String?
-  quantity        Int      @default(1)
-  totalAmount     Decimal?
-  currency        String?
-  customerEmail   String?
-  attributedAt    DateTime @default(now())
-  minutesBetween  Int?
+  id             String             @id @default(cuid())
+  merchantId     String
+  merchant       Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  clickId        String?            @unique
+  click          ReviewWidgetClick? @relation(fields: [clickId], references: [id], onDelete: SetNull)
+  orderId        String
+  orderName      String?
+  productId      String
+  productName    String?
+  quantity       Int                @default(1)
+  totalAmount    Decimal?
+  currency       String?
+  customerEmail  String?
+  attributedAt   DateTime           @default(now())
+  minutesBetween Int?
 
+  @@unique([merchantId, orderId, productId])
   @@index([merchantId])
   @@index([merchantId, productId])
   @@index([attributedAt])
@@ -436,7 +489,7 @@ model WhatsAppUsageRecord {
   reviewRequest        ReviewRequest? @relation(fields: [reviewRequestId], references: [id], onDelete: SetNull)
   messageSid           String?
   countryCode          String?
-  costPerMessage       Decimal  @db.Decimal(10, 4)
+  costPerMessage       Decimal        @db.Decimal(10, 4)
   billed               Boolean        @default(false)
   billedAt             DateTime?
   shopifyUsageRecordId String?
@@ -481,21 +534,22 @@ model MerchantMilestone {
 // ============================================================================
 
 model BlastJob {
-  id          String    @id @default(cuid())
+  id          String         @id @default(cuid())
   merchantId  String
-  merchant    Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchant    Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   status      BlastJobStatus @default(PENDING)
   channel     MessageChannel
   limit       Int?
-  sent        Int       @default(0)
-  failed      Int       @default(0)
-  total       Int       @default(0)
-  createdAt   DateTime  @default(now())
+  sent        Int            @default(0)
+  failed      Int            @default(0)
+  total       Int            @default(0)
+  createdAt   DateTime       @default(now())
   startedAt   DateTime?
   completedAt DateTime?
   error       String?
 
   @@index([merchantId, status])
+  @@index([status, createdAt])
 }
 
 model WebhookEvent {
@@ -512,14 +566,14 @@ model WebhookEvent {
 // ============================================================================
 
 model ErrorGroup {
-  id          String           @id @default(cuid())
-  fingerprint String           @unique
+  id          String            @id @default(cuid())
+  fingerprint String            @unique
   message     String
   source      String
-  status      ErrorGroupStatus @default(OPEN)
-  count       Int              @default(1)
-  firstSeenAt DateTime         @default(now())
-  lastSeenAt  DateTime         @default(now())
+  status      ErrorGroupStatus  @default(OPEN)
+  count       Int               @default(1)
+  firstSeenAt DateTime          @default(now())
+  lastSeenAt  DateTime          @default(now())
   resolvedAt  DateTime?
   note        String?
   occurrences ErrorOccurrence[]
@@ -539,6 +593,35 @@ model ErrorOccurrence {
   createdAt    DateTime   @default(now())
 
   @@index([errorGroupId, createdAt])
+  @@index([merchantId])
+}
+
+model WidgetImpression {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  widgetType String   // "product" | "testimonials" | "insights" | "badge"
+  productId  String?
+  sessionId  String
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([merchantId, widgetType])
+  @@index([createdAt])
+}
+
+model MerchantDigest {
+  id          String   @id @default(cuid())
+  merchantId  String
+  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  weekKey     String
+  content     Json
+  generatedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@unique([merchantId, weekKey])
   @@index([merchantId])
 }
 
